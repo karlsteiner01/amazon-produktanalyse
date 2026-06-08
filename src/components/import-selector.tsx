@@ -1,6 +1,6 @@
 'use client'
 
-import { useImport } from '@/hooks/use-import'
+import type { CsvImport } from '@/types'
 import {
   Select,
   SelectContent,
@@ -9,13 +9,17 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 
-export function ImportSelector() {
-  const { imports, selectedImportId, switchImport, refreshImports } = useImport()
+interface ImportSelectorProps {
+  imports: CsvImport[]
+  selectedImportId: string | null
+  onSelect: (id: string) => void
+}
 
+export function ImportSelector({ imports, selectedImportId, onSelect }: ImportSelectorProps) {
   if (imports.length <= 1) return null
 
   return (
-      <Select value={selectedImportId || undefined} onValueChange={(val) => val && switchImport(val)}>
+      <Select value={selectedImportId || undefined} onValueChange={(val) => val && onSelect(val)}>
       <SelectTrigger className="w-48 h-8 text-xs">
         <SelectValue placeholder="Import wählen..." />
       </SelectTrigger>

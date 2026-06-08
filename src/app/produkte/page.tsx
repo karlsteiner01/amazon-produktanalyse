@@ -55,7 +55,7 @@ export default function ProduktePage() {
   const [sortDir, setSortDir] = useState<SortDir>('desc')
   const [tierFilter, setTierFilter] = useState<string>('all')
   const { columns: columnOrder, setColumns, resetColumns } = useColumnOrder('produkte-columns', DEFAULT_COLUMNS)
-  const { selectedImportId } = useImport()
+  const { imports, selectedImportId, switchImport } = useImport()
   const dragCol = useRef<ColumnId | null>(null)
   const dropCol = useRef<ColumnId | null>(null)
 
@@ -275,7 +275,7 @@ export default function ProduktePage() {
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
           <h2 className="text-lg font-semibold">Produkte</h2>
-          <ImportSelector />
+          <ImportSelector imports={imports} selectedImportId={selectedImportId} onSelect={switchImport} />
         </div>
         <div className="flex items-center gap-2">
           {columnOrder.join(',') !== DEFAULT_COLUMNS.join(',') && (

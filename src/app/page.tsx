@@ -16,7 +16,7 @@ export default function DashboardPage() {
   const [products, setProducts] = useState<ProductWithAnalysis[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const { selectedImportId, switchImport, refreshImports } = useImport()
+  const { imports, selectedImportId, switchImport, refreshImports } = useImport()
 
   async function loadData(importId: string | undefined) {
     setLoading(true)
@@ -97,7 +97,7 @@ export default function DashboardPage() {
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
           <h2 className="text-lg font-semibold">Übersicht</h2>
-          <ImportSelector />
+          <ImportSelector imports={imports} selectedImportId={selectedImportId} onSelect={switchImport} />
         </div>
         {products.length > 0 && (
           <p className="text-xs text-zinc-400">

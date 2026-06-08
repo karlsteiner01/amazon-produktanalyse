@@ -21,7 +21,7 @@ export default function AnalysenPage() {
   const router = useRouter()
   const [analyses, setAnalyses] = useState<AnalysisWithProduct[]>([])
   const [loading, setLoading] = useState(true)
-  const { selectedImportId } = useImport()
+  const { imports, selectedImportId, switchImport } = useImport()
 
   useEffect(() => {
     async function load() {
@@ -88,7 +88,7 @@ export default function AnalysenPage() {
       <div>
         <div className="flex items-center gap-4 mb-6">
           <h2 className="text-lg font-semibold">Analysen</h2>
-          <ImportSelector />
+          <ImportSelector imports={imports} selectedImportId={selectedImportId} onSelect={switchImport} />
         </div>
         <p className="text-sm text-zinc-500">Lade Analysen...</p>
       </div>
@@ -100,7 +100,7 @@ export default function AnalysenPage() {
       <div>
         <div className="flex items-center gap-4 mb-6">
           <h2 className="text-lg font-semibold">Analysen</h2>
-          <ImportSelector />
+          <ImportSelector imports={imports} selectedImportId={selectedImportId} onSelect={switchImport} />
         </div>
         <div className="rounded-lg border border-zinc-200 dark:border-zinc-700 p-12 text-center">
           <FileText className="h-8 w-8 mx-auto mb-3 text-zinc-300 dark:text-zinc-600" />
@@ -117,7 +117,7 @@ export default function AnalysenPage() {
     <div>
       <div className="flex items-center gap-4 mb-6">
         <h2 className="text-lg font-semibold">Analysen</h2>
-        <ImportSelector />
+        <ImportSelector imports={imports} selectedImportId={selectedImportId} onSelect={switchImport} />
       </div>
 
       <div className="space-y-3">
