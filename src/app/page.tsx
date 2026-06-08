@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { getSupabase } from "@/lib/supabase"
 import type { Product, Analysis } from '@/types'
 import { KpiCards } from '@/components/dashboard/kpi-cards'
@@ -18,7 +18,8 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null)
   const { selectedImportId, refreshImports } = useImport()
 
-  async function loadData() {
+  const loadData = useCallback(async () => {
+    const currentId = selectedImportId
     setLoading(true)
     setError(null)
 
@@ -26,8 +27,8 @@ export default function DashboardPage() {
       .from('products')
       .select('*')
 
-    if (selectedImportId) {
-      query = query.eq('import_id', selectedImportId)
+    if (currentId) {
+      query = query.eq('import_id', currentId)
     }
 
     const { data: pData, error: pErr } = await query.order('created_at', { ascending: false })
@@ -56,11 +57,11 @@ export default function DashboardPage() {
 
     setProducts(withAnalysis)
     setLoading(false)
-  }
+  }, [selectedImportId])
 
   useEffect(() => {
     if (selectedImportId !== undefined) loadData()
-  }, [selectedImportId])
+  }, [loadData])
 
   const totalSales = products.reduce((s, p) => s + (p.asin_sales ?? 0), 0)
   const totalRevenue = products.reduce((s, p) => s + (p.asin_revenue ?? 0), 0)
@@ -112,7 +113,7 @@ export default function DashboardPage() {
           <p className="text-xs text-zinc-400 mb-6">
             Lade einen Helium-10 Xray Export hoch, um zu starten.
           </p>
-          <UploadCsv onImport={(id) => { refreshImports(id); loadData() }} />
+          <UploadCsv onImport={(id) => refreshImports(id)} />
         </div>
       )}
 
@@ -134,7 +135,7 @@ export default function DashboardPage() {
             </div>
             <div className="space-y-6">
               <MarketOverview products={products} />
-              <UploadCsv onImport={(id) => { refreshImports(id); loadData() }} />
+              <UploadCsv onImport={(id) => refreshImports(id)} />
             </div>
           </div>
         </>
