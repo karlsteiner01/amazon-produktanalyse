@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react'
 import { parseCsvText, parseCsvRows } from '@/lib/csv-parser'
+import { computeScores } from '@/lib/scoring'
 import { getSupabase } from "@/lib/supabase"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -99,6 +100,41 @@ export function UploadCsv({ onImport }: UploadCsvProps) {
         setProgress(50 + Math.round((i / products.length) * 40))
       }
 
+      setProgress(92)
+      setStatus('importing')
+
+      const scores = computeScores(products)
+      let analysisCount = 0
+
+      for (const p of products) {
+        const s = scores.get(p.asin)
+        if (!s) continue
+
+        const { data: productData } = await (getSupabase() as any)
+          .from('products')
+          .select('id')
+          .eq('asin', p.asin)
+          .single()
+
+        if (productData) {
+          await (getSupabase() as any).from('analyses').upsert(
+            {
+              product_id: productData.id,
+              opportunity_score: s.opportunity_score,
+              product_tier: s.product_tier,
+              demand_score: s.demand_score,
+              revenue_score: s.revenue_score,
+              competition_score: s.competition_score,
+              margin_score: s.margin_score,
+              improvement_score: s.improvement_score,
+              risk_score: s.risk_score,
+            },
+            { onConflict: 'product_id' }
+          )
+          analysisCount++
+        }
+      }
+
       if (importId) {
         await (getSupabase() as any)
           .from('csv_imports')
@@ -108,7 +144,7 @@ export function UploadCsv({ onImport }: UploadCsvProps) {
 
       setProgress(100)
       setStatus('done')
-      setMessage(`${successCount} von ${products.length} Produkten importiert`)
+      setMessage(`${successCount} Produkte, ${analysisCount} Analysen erstellt`)
       onImport()
     } catch (e: unknown) {
       setStatus('error')
