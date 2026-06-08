@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { getSupabase } from "@/lib/supabase"
 import type { Product, Analysis } from '@/types'
@@ -18,7 +18,6 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Search, ArrowUpDown } from 'lucide-react'
 import { useColumnOrder } from '@/hooks/use-column-order'
-import { ColumnReorder } from '@/components/ui/column-reorder'
 
 type ProductWithAnalysis = Product & { analysis?: Analysis }
 type SortKey = 'asin_sales' | 'asin_revenue' | 'price_eur' | 'opportunity_score'
@@ -53,6 +52,8 @@ export default function ProduktePage() {
   const [sortDir, setSortDir] = useState<SortDir>('desc')
   const [tierFilter, setTierFilter] = useState<string>('all')
   const { columns: columnOrder, setColumns, resetColumns } = useColumnOrder('produkte-columns', DEFAULT_COLUMNS)
+  const dragCol = useRef<ColumnId | null>(null)
+  const dropCol = useRef<ColumnId | null>(null)
 
   useEffect(() => {
     async function load() {
@@ -117,10 +118,40 @@ export default function ProduktePage() {
     }
   }
 
-  function SortHeader({ label, sortKey: sk }: { label: string; sortKey: SortKey }) {
+  function handleDragStart(colId: ColumnId) {
+    dragCol.current = colId
+  }
+
+  function handleDragOver(e: React.DragEvent, colId: ColumnId) {
+    e.preventDefault()
+    dropCol.current = colId
+  }
+
+  function handleDragEnd() {
+    const from = dragCol.current
+    const to = dropCol.current
+    dragCol.current = null
+    dropCol.current = null
+    if (!from || !to || from === to) return
+
+    const fromIdx = columnOrder.indexOf(from)
+    const toIdx = columnOrder.indexOf(to)
+    if (fromIdx === -1 || toIdx === -1) return
+
+    const next = [...columnOrder]
+    next.splice(fromIdx, 1)
+    next.splice(toIdx, 0, from)
+    setColumns(next)
+  }
+
+  function SortHeader({ label, sortKey: sk, colId }: { label: string; sortKey: SortKey; colId: ColumnId }) {
     const isActive = sortKey === sk
     return (
       <TableHead
+        draggable
+        onDragStart={() => handleDragStart(colId)}
+        onDragOver={(e) => handleDragOver(e, colId)}
+        onDragEnd={handleDragEnd}
         className="text-xs font-medium cursor-pointer select-none"
         onClick={() => toggleSort(sk)}
       >
@@ -134,42 +165,70 @@ export default function ProduktePage() {
     )
   }
 
+  function StaticHeader({ label, colId }: { label: string; colId: ColumnId }) {
+    return (
+      <TableHead
+        draggable
+        onDragStart={() => handleDragStart(colId)}
+        onDragOver={(e) => handleDragOver(e, colId)}
+        onDragEnd={handleDragEnd}
+        className="text-xs font-medium cursor-grab active:cursor-grabbing"
+      >
+        {label}
+      </TableHead>
+    )
+  }
+
+  function RightHeader({ label, colId }: { label: string; colId: ColumnId }) {
+    return (
+      <TableHead
+        draggable
+        onDragStart={() => handleDragStart(colId)}
+        onDragOver={(e) => handleDragOver(e, colId)}
+        onDragEnd={handleDragEnd}
+        className="text-xs font-medium text-right cursor-grab active:cursor-grabbing"
+      >
+        {label}
+      </TableHead>
+    )
+  }
+
   function renderHeader(colId: ColumnId) {
-    if (colId === 'product') return <TableHead key="product" className="text-xs font-medium">Produkt</TableHead>
-    if (colId === 'brand') return <TableHead key="brand" className="text-xs font-medium">Marke</TableHead>
-    if (colId === 'asin') return <TableHead key="asin" className="text-xs font-medium">ASIN</TableHead>
-    if (colId === 'price_eur') return <SortHeader key="price_eur" label="Preis" sortKey="price_eur" />
-    if (colId === 'asin_sales') return <SortHeader key="asin_sales" label="Verkäufe" sortKey="asin_sales" />
-    if (colId === 'asin_revenue') return <SortHeader key="asin_revenue" label="Umsatz" sortKey="asin_revenue" />
-    if (colId === 'rating') return <TableHead key="rating" className="text-xs font-medium text-right">Rating</TableHead>
-    if (colId === 'review_count') return <TableHead key="review_count" className="text-xs font-medium text-right">Reviews</TableHead>
-    if (colId === 'is_fba') return <TableHead key="is_fba" className="text-xs font-medium text-right">FBA</TableHead>
-    if (colId === 'opportunity_score') return <SortHeader key="opportunity_score" label="Score" sortKey="opportunity_score" />
-    if (colId === 'product_tier') return <TableHead key="product_tier" className="text-xs font-medium text-right">Tier</TableHead>
+    if (colId === 'product') return <StaticHeader key={colId} label="Produkt" colId={colId} />
+    if (colId === 'brand') return <StaticHeader key={colId} label="Marke" colId={colId} />
+    if (colId === 'asin') return <StaticHeader key={colId} label="ASIN" colId={colId} />
+    if (colId === 'price_eur') return <SortHeader key={colId} label="Preis" sortKey="price_eur" colId={colId} />
+    if (colId === 'asin_sales') return <SortHeader key={colId} label="Verkäufe" sortKey="asin_sales" colId={colId} />
+    if (colId === 'asin_revenue') return <SortHeader key={colId} label="Umsatz" sortKey="asin_revenue" colId={colId} />
+    if (colId === 'rating') return <RightHeader key={colId} label="Rating" colId={colId} />
+    if (colId === 'review_count') return <RightHeader key={colId} label="Reviews" colId={colId} />
+    if (colId === 'is_fba') return <RightHeader key={colId} label="FBA" colId={colId} />
+    if (colId === 'opportunity_score') return <SortHeader key={colId} label="Score" sortKey="opportunity_score" colId={colId} />
+    if (colId === 'product_tier') return <RightHeader key={colId} label="Tier" colId={colId} />
     return null
   }
 
   function renderCell(colId: ColumnId, p: ProductWithAnalysis) {
     if (colId === 'product') return (
-      <TableCell key="product" className="min-w-[200px] max-w-[350px] truncate text-xs" title={p.product_details || ''}>{p.product_details}</TableCell>
+      <TableCell key={colId} className="min-w-[200px] max-w-[350px] truncate text-xs" title={p.product_details || ''}>{p.product_details}</TableCell>
     )
-    if (colId === 'brand') return <TableCell key="brand" className="text-xs">{p.brand}</TableCell>
-    if (colId === 'asin') return <TableCell key="asin" className="text-xs font-mono text-zinc-500">{p.asin}</TableCell>
-    if (colId === 'price_eur') return <TableCell key="price_eur" className="text-xs text-right">{formatEur(p.price_eur)}</TableCell>
-    if (colId === 'asin_sales') return <TableCell key="asin_sales" className="text-xs text-right">{formatNumber(p.asin_sales)}</TableCell>
-    if (colId === 'asin_revenue') return <TableCell key="asin_revenue" className="text-xs text-right">{formatEur(p.asin_revenue)}</TableCell>
-    if (colId === 'rating') return <TableCell key="rating" className="text-xs text-right">{p.rating ?? '–'}</TableCell>
-    if (colId === 'review_count') return <TableCell key="review_count" className="text-xs text-right">{formatNumber(p.review_count)}</TableCell>
+    if (colId === 'brand') return <TableCell key={colId} className="text-xs">{p.brand}</TableCell>
+    if (colId === 'asin') return <TableCell key={colId} className="text-xs font-mono text-zinc-500">{p.asin}</TableCell>
+    if (colId === 'price_eur') return <TableCell key={colId} className="text-xs text-right">{formatEur(p.price_eur)}</TableCell>
+    if (colId === 'asin_sales') return <TableCell key={colId} className="text-xs text-right">{formatNumber(p.asin_sales)}</TableCell>
+    if (colId === 'asin_revenue') return <TableCell key={colId} className="text-xs text-right">{formatEur(p.asin_revenue)}</TableCell>
+    if (colId === 'rating') return <TableCell key={colId} className="text-xs text-right">{p.rating ?? '–'}</TableCell>
+    if (colId === 'review_count') return <TableCell key={colId} className="text-xs text-right">{formatNumber(p.review_count)}</TableCell>
     if (colId === 'is_fba') return (
-      <TableCell key="is_fba" className="text-xs text-right">
+      <TableCell key={colId} className="text-xs text-right">
         {p.is_fba ? <span className="text-green-600 dark:text-green-400">Ja</span> : <span className="text-zinc-400">Nein</span>}
       </TableCell>
     )
     if (colId === 'opportunity_score') return (
-      <TableCell key="opportunity_score" className="text-xs text-right font-medium">{p.analysis?.opportunity_score ?? '–'}</TableCell>
+      <TableCell key={colId} className="text-xs text-right font-medium">{p.analysis?.opportunity_score ?? '–'}</TableCell>
     )
     if (colId === 'product_tier') return (
-      <TableCell key="product_tier" className="text-xs text-right">
+      <TableCell key={colId} className="text-xs text-right">
         {p.analysis?.product_tier && (
           <Badge
             style={{
@@ -198,12 +257,14 @@ export default function ProduktePage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-lg font-semibold">Produkte</h2>
-        <ColumnReorder
-          columns={ALL_COLUMNS}
-          order={columnOrder}
-          onOrderChange={setColumns}
-          onReset={resetColumns}
-        />
+        <div className="flex items-center gap-2">
+          {columnOrder.join(',') !== DEFAULT_COLUMNS.join(',') && (
+            <Button variant="ghost" size="sm" className="text-xs h-7 text-zinc-500" onClick={resetColumns}>
+              Zurücksetzen
+            </Button>
+          )}
+          <p className="text-xs text-zinc-400">{filtered.length} Produkte</p>
+        </div>
       </div>
 
       <div className="flex items-center gap-3 mb-4">
@@ -229,7 +290,6 @@ export default function ProduktePage() {
             </Button>
           ))}
         </div>
-        <p className="text-xs text-zinc-400 ml-auto">{filtered.length} Produkte</p>
       </div>
 
       <div className="border rounded-lg overflow-x-auto">
