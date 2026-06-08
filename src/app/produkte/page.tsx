@@ -18,6 +18,8 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Search, ArrowUpDown } from 'lucide-react'
 import { useColumnOrder } from '@/hooks/use-column-order'
+import { useImport } from '@/hooks/use-import'
+import { ImportSelector } from '@/components/import-selector'
 
 type ProductWithAnalysis = Product & { analysis?: Analysis }
 type SortKey = 'asin_sales' | 'asin_revenue' | 'price_eur' | 'opportunity_score'
@@ -53,15 +55,21 @@ export default function ProduktePage() {
   const [sortDir, setSortDir] = useState<SortDir>('desc')
   const [tierFilter, setTierFilter] = useState<string>('all')
   const { columns: columnOrder, setColumns, resetColumns } = useColumnOrder('produkte-columns', DEFAULT_COLUMNS)
+  const { selectedImportId } = useImport()
   const dragCol = useRef<ColumnId | null>(null)
   const dropCol = useRef<ColumnId | null>(null)
 
   useEffect(() => {
     async function load() {
-      const { data: pData } = await (getSupabase() as any)
+      let query = (getSupabase() as any)
         .from('products')
         .select('*')
-        .order('created_at', { ascending: false })
+
+      if (selectedImportId) {
+        query = query.eq('import_id', selectedImportId)
+      }
+
+      const { data: pData } = await query.order('created_at', { ascending: false })
 
       const { data: aData } = await (getSupabase() as any).from('analyses').select('*')
       const analysisMap = new Map<string, Analysis>()
@@ -76,7 +84,7 @@ export default function ProduktePage() {
       setLoading(false)
     }
     load()
-  }, [])
+  }, [selectedImportId])
 
   const filtered = products
     .filter((p) => {
@@ -265,7 +273,10 @@ export default function ProduktePage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-lg font-semibold">Produkte</h2>
+        <div className="flex items-center gap-4">
+          <h2 className="text-lg font-semibold">Produkte</h2>
+          <ImportSelector />
+        </div>
         <div className="flex items-center gap-2">
           {columnOrder.join(',') !== DEFAULT_COLUMNS.join(',') && (
             <Button variant="ghost" size="sm" className="text-xs h-7 text-zinc-500" onClick={resetColumns}>

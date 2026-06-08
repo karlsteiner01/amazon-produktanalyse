@@ -7,6 +7,8 @@ import { KpiCards } from '@/components/dashboard/kpi-cards'
 import { TopProducts } from '@/components/dashboard/top-products'
 import { MarketOverview } from '@/components/dashboard/market-overview'
 import { UploadCsv } from '@/components/dashboard/upload-csv'
+import { ImportSelector } from '@/components/import-selector'
+import { useImport } from '@/hooks/use-import'
 
 type ProductWithAnalysis = Product & { analysis?: Analysis }
 
@@ -14,15 +16,21 @@ export default function DashboardPage() {
   const [products, setProducts] = useState<ProductWithAnalysis[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const { selectedImportId, refreshImports } = useImport()
 
   async function loadData() {
     setLoading(true)
     setError(null)
 
-    const { data: pData, error: pErr } = await (getSupabase() as any)
+    let query = (getSupabase() as any)
       .from('products')
       .select('*')
-      .order('created_at', { ascending: false })
+
+    if (selectedImportId) {
+      query = query.eq('import_id', selectedImportId)
+    }
+
+    const { data: pData, error: pErr } = await query.order('created_at', { ascending: false })
 
     if (pErr) {
       setError(pErr.message)
@@ -51,8 +59,8 @@ export default function DashboardPage() {
   }
 
   useEffect(() => {
-    loadData()
-  }, [])
+    if (selectedImportId !== undefined) loadData()
+  }, [selectedImportId])
 
   const totalSales = products.reduce((s, p) => s + (p.asin_sales ?? 0), 0)
   const totalRevenue = products.reduce((s, p) => s + (p.asin_revenue ?? 0), 0)
@@ -87,7 +95,10 @@ export default function DashboardPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-lg font-semibold">Übersicht</h2>
+        <div className="flex items-center gap-4">
+          <h2 className="text-lg font-semibold">Übersicht</h2>
+          <ImportSelector />
+        </div>
         {products.length > 0 && (
           <p className="text-xs text-zinc-400">
             {products.length} Produkte geladen
@@ -101,7 +112,7 @@ export default function DashboardPage() {
           <p className="text-xs text-zinc-400 mb-6">
             Lade einen Helium-10 Xray Export hoch, um zu starten.
           </p>
-          <UploadCsv onImport={loadData} />
+          <UploadCsv onImport={(id) => { refreshImports(id); loadData() }} />
         </div>
       )}
 
@@ -123,7 +134,7 @@ export default function DashboardPage() {
             </div>
             <div className="space-y-6">
               <MarketOverview products={products} />
-              <UploadCsv onImport={loadData} />
+              <UploadCsv onImport={(id) => { refreshImports(id); loadData() }} />
             </div>
           </div>
         </>

@@ -10,7 +10,7 @@ import { Progress } from '@/components/ui/progress'
 import { Upload, FileText, CheckCircle, AlertCircle } from 'lucide-react'
 
 interface UploadCsvProps {
-  onImport: () => void
+  onImport: (importId?: string) => void
 }
 
 export function UploadCsv({ onImport }: UploadCsvProps) {
@@ -64,7 +64,7 @@ export function UploadCsv({ onImport }: UploadCsvProps) {
       for (let i = 0; i < products.length; i++) {
         const p = products[i]
 
-        const { error: upsertErr } = await (getSupabase() as any).from('products').upsert(
+        const { error: insertErr } = await (getSupabase() as any).from('products').insert(
           {
             asin: p.asin,
             product_details: p.product_details,
@@ -91,11 +91,10 @@ export function UploadCsv({ onImport }: UploadCsvProps) {
             bestseller: p.bestseller,
             seller_age_months: p.seller_age_months,
             import_id: importId,
-          },
-          { onConflict: 'asin' }
+          }
         )
 
-        if (!upsertErr) successCount++
+        if (!insertErr) successCount++
 
         setProgress(50 + Math.round((i / products.length) * 40))
       }
@@ -106,32 +105,28 @@ export function UploadCsv({ onImport }: UploadCsvProps) {
       const scores = computeScores(products)
       let analysisCount = 0
 
-      for (const p of products) {
-        const s = scores.get(p.asin)
-        if (!s) continue
+      const { data: importedProducts } = await (getSupabase() as any)
+        .from('products')
+        .select('id, asin')
+        .eq('import_id', importId)
 
-        const { data: productData } = await (getSupabase() as any)
-          .from('products')
-          .select('id')
-          .eq('asin', p.asin)
-          .single()
+      if (importedProducts) {
+        for (const prod of importedProducts) {
+          const s = scores.get(prod.asin)
+          if (!s) continue
 
-        if (productData) {
-          await (getSupabase() as any).from('analyses').upsert(
-            {
-              product_id: productData.id,
-              opportunity_score: s.opportunity_score,
-              product_tier: s.product_tier,
-              demand_score: s.demand_score,
-              revenue_score: s.revenue_score,
-              competition_score: s.competition_score,
-              margin_score: s.margin_score,
-              improvement_score: s.improvement_score,
-              risk_score: s.risk_score,
-            },
-            { onConflict: 'product_id' }
-          )
-          analysisCount++
+          const { error: insErr } = await (getSupabase() as any).from('analyses').insert({
+            product_id: prod.id,
+            opportunity_score: s.opportunity_score,
+            product_tier: s.product_tier,
+            demand_score: s.demand_score,
+            revenue_score: s.revenue_score,
+            competition_score: s.competition_score,
+            margin_score: s.margin_score,
+            improvement_score: s.improvement_score,
+            risk_score: s.risk_score,
+          })
+          if (!insErr) analysisCount++
         }
       }
 
@@ -145,7 +140,7 @@ export function UploadCsv({ onImport }: UploadCsvProps) {
       setProgress(100)
       setStatus('done')
       setMessage(`${successCount} Produkte, ${analysisCount} Analysen erstellt`)
-      onImport()
+      onImport(importId || undefined)
     } catch (e: unknown) {
       setStatus('error')
       setMessage(e instanceof Error ? e.message : 'Import fehlgeschlagen')

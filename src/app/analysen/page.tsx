@@ -10,6 +10,8 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button } from '@/components/ui/button'
 import { useRouter } from 'next/navigation'
 import { FileText } from 'lucide-react'
+import { ImportSelector } from '@/components/import-selector'
+import { useImport } from '@/hooks/use-import'
 
 interface AnalysisWithProduct extends Analysis {
   product?: Product
@@ -19,12 +21,31 @@ export default function AnalysenPage() {
   const router = useRouter()
   const [analyses, setAnalyses] = useState<AnalysisWithProduct[]>([])
   const [loading, setLoading] = useState(true)
+  const { selectedImportId } = useImport()
 
   useEffect(() => {
     async function load() {
+      let productQuery = (getSupabase() as any)
+        .from('products')
+        .select('id')
+
+      if (selectedImportId) {
+        productQuery = productQuery.eq('import_id', selectedImportId)
+      }
+
+      const { data: productIds } = await productQuery
+
+      if (!productIds || productIds.length === 0) {
+        setAnalyses([])
+        setLoading(false)
+        return
+      }
+
+      const ids = productIds.map((p: any) => p.id)
       const { data: aData } = await (getSupabase() as any)
         .from('analyses')
         .select('*')
+        .in('product_id', ids)
         .order('opportunity_score', { ascending: false })
         .order('created_at', { ascending: false })
 
@@ -33,11 +54,11 @@ export default function AnalysenPage() {
         return
       }
 
-      const productIds = aData.map((a: Analysis) => a.product_id)
+      const productIdsFromImport = aData.map((a: Analysis) => a.product_id)
       const { data: pData } = await (getSupabase() as any)
         .from('products')
         .select('*')
-        .in('id', productIds)
+        .in('id', productIdsFromImport)
 
       const productMap = new Map<string, Product>()
       if (pData) pData.forEach((p: Product) => productMap.set(p.id, p))
@@ -51,7 +72,7 @@ export default function AnalysenPage() {
       setLoading(false)
     }
     load()
-  }, [])
+  }, [selectedImportId])
 
   const formatDate = (d: string) =>
     new Date(d).toLocaleDateString('de-DE', {
@@ -65,7 +86,10 @@ export default function AnalysenPage() {
   if (loading) {
     return (
       <div>
-        <h2 className="text-lg font-semibold mb-6">Analysen</h2>
+        <div className="flex items-center gap-4 mb-6">
+          <h2 className="text-lg font-semibold">Analysen</h2>
+          <ImportSelector />
+        </div>
         <p className="text-sm text-zinc-500">Lade Analysen...</p>
       </div>
     )
@@ -74,7 +98,10 @@ export default function AnalysenPage() {
   if (analyses.length === 0) {
     return (
       <div>
-        <h2 className="text-lg font-semibold mb-6">Analysen</h2>
+        <div className="flex items-center gap-4 mb-6">
+          <h2 className="text-lg font-semibold">Analysen</h2>
+          <ImportSelector />
+        </div>
         <div className="rounded-lg border border-zinc-200 dark:border-zinc-700 p-12 text-center">
           <FileText className="h-8 w-8 mx-auto mb-3 text-zinc-300 dark:text-zinc-600" />
           <p className="text-sm text-zinc-500 mb-1">Noch keine Analysen vorhanden</p>
@@ -88,7 +115,10 @@ export default function AnalysenPage() {
 
   return (
     <div>
-      <h2 className="text-lg font-semibold mb-6">Analysen</h2>
+      <div className="flex items-center gap-4 mb-6">
+        <h2 className="text-lg font-semibold">Analysen</h2>
+        <ImportSelector />
+      </div>
 
       <div className="space-y-3">
         {analyses.map((a, idx) => (
