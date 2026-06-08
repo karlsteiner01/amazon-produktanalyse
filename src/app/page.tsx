@@ -1,65 +1,133 @@
-import Image from "next/image";
+'use client'
 
-export default function Home() {
-  return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+import { useEffect, useState } from 'react'
+import { getSupabase } from "@/lib/supabase"
+import type { Product, Analysis } from '@/types'
+import { KpiCards } from '@/components/dashboard/kpi-cards'
+import { TopProducts } from '@/components/dashboard/top-products'
+import { MarketOverview } from '@/components/dashboard/market-overview'
+import { UploadCsv } from '@/components/dashboard/upload-csv'
+
+type ProductWithAnalysis = Product & { analysis?: Analysis }
+
+export default function DashboardPage() {
+  const [products, setProducts] = useState<ProductWithAnalysis[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  async function loadData() {
+    setLoading(true)
+    setError(null)
+
+    const { data: pData, error: pErr } = await (getSupabase() as any)
+      .from('products')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    if (pErr) {
+      setError(pErr.message)
+      setLoading(false)
+      return
+    }
+
+    const { data: aData } = await (getSupabase() as any)
+      .from('analyses')
+      .select('*')
+
+    const analysisMap = new Map<string, Analysis>()
+    if (aData) {
+      aData.forEach((a: Analysis) => analysisMap.set(a.product_id, a))
+    }
+
+    const withAnalysis: ProductWithAnalysis[] = (pData || []).map(
+      (p: Product) => ({
+        ...p,
+        analysis: analysisMap.get(p.id),
+      })
+    )
+
+    setProducts(withAnalysis)
+    setLoading(false)
+  }
+
+  useEffect(() => {
+    loadData()
+  }, [])
+
+  const totalSales = products.reduce((s, p) => s + (p.asin_sales ?? 0), 0)
+  const totalRevenue = products.reduce((s, p) => s + (p.asin_revenue ?? 0), 0)
+  const avgPrice = products.length
+    ? products.reduce((s, p) => s + (p.price_eur ?? 0), 0) / products.length
+    : 0
+  const avgRating = products.length
+    ? products.reduce((s, p) => s + (p.rating ?? 0), 0) / products.length
+    : 0
+  const fbaCount = products.filter((p) => p.is_fba).length
+
+  if (error) {
+    return (
+      <div>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-lg font-semibold">Übersicht</h2>
+        </div>
+        <div className="rounded-lg border border-zinc-200 dark:border-zinc-700 p-8 text-center">
+          <p className="text-sm text-zinc-500 mb-2">Supabase nicht verbunden</p>
+          <p className="text-xs text-zinc-400 mb-4">{error}</p>
+          <p className="text-xs text-zinc-400">
+            Erstelle ein Supabase-Projekt, führe das SQL-Schema aus und setze die Umgebungsvariablen.
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+        <div className="mt-6">
+          <UploadCsv onImport={loadData} />
         </div>
-      </main>
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-lg font-semibold">Übersicht</h2>
+        {products.length > 0 && (
+          <p className="text-xs text-zinc-400">
+            {products.length} Produkte geladen
+          </p>
+        )}
+      </div>
+
+      {products.length === 0 && !loading && (
+        <div className="rounded-lg border border-zinc-200 dark:border-zinc-700 p-12 text-center mb-6">
+          <p className="text-sm text-zinc-500 mb-2">Noch keine Produkte vorhanden</p>
+          <p className="text-xs text-zinc-400 mb-6">
+            Lade einen Helium-10 Xray Export hoch, um zu starten.
+          </p>
+          <UploadCsv onImport={loadData} />
+        </div>
+      )}
+
+      {products.length > 0 && (
+        <>
+          <KpiCards
+            productCount={products.length}
+            totalSales={totalSales}
+            totalRevenue={totalRevenue}
+            avgPrice={avgPrice}
+            avgRating={avgRating}
+            fbaCount={fbaCount}
+          />
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+            <div className="lg:col-span-2 space-y-6">
+              <TopProducts products={products} title="Top 5 nach Umsatz" sortBy="sales" />
+              <TopProducts products={products} title="Top 5 nach Opportunity Score" sortBy="score" />
+            </div>
+            <div className="space-y-6">
+              <MarketOverview products={products} />
+              <UploadCsv onImport={loadData} />
+            </div>
+          </div>
+        </>
+      )}
     </div>
-  );
+  )
 }
