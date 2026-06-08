@@ -22,9 +22,10 @@ import { useColumnOrder } from '@/hooks/use-column-order'
 type ProductWithAnalysis = Product & { analysis?: Analysis }
 type SortKey = 'asin_sales' | 'asin_revenue' | 'price_eur' | 'opportunity_score'
 type SortDir = 'asc' | 'desc'
-type ColumnId = 'product' | 'brand' | 'asin' | 'price_eur' | 'asin_sales' | 'asin_revenue' | 'rating' | 'review_count' | 'is_fba' | 'opportunity_score' | 'product_tier'
+type ColumnId = 'image' | 'product' | 'brand' | 'asin' | 'price_eur' | 'asin_sales' | 'asin_revenue' | 'rating' | 'review_count' | 'is_fba' | 'opportunity_score' | 'product_tier'
 
 const ALL_COLUMNS: { id: ColumnId; label: string; sortKey?: SortKey }[] = [
+  { id: 'image', label: '' },
   { id: 'product', label: 'Produkt' },
   { id: 'brand', label: 'Marke' },
   { id: 'asin', label: 'ASIN' },
@@ -39,7 +40,7 @@ const ALL_COLUMNS: { id: ColumnId; label: string; sortKey?: SortKey }[] = [
 ]
 
 const DEFAULT_COLUMNS: ColumnId[] = [
-  'product', 'brand', 'asin', 'price_eur', 'asin_sales', 'asin_revenue',
+  'image', 'product', 'brand', 'asin', 'price_eur', 'asin_sales', 'asin_revenue',
   'rating', 'review_count', 'is_fba', 'opportunity_score', 'product_tier',
 ]
 
@@ -194,6 +195,7 @@ export default function ProduktePage() {
   }
 
   function renderHeader(colId: ColumnId) {
+    if (colId === 'image') return <TableHead key={colId} className="w-12" />
     if (colId === 'product') return <StaticHeader key={colId} label="Produkt" colId={colId} />
     if (colId === 'brand') return <StaticHeader key={colId} label="Marke" colId={colId} />
     if (colId === 'asin') return <StaticHeader key={colId} label="ASIN" colId={colId} />
@@ -209,6 +211,13 @@ export default function ProduktePage() {
   }
 
   function renderCell(colId: ColumnId, p: ProductWithAnalysis) {
+    if (colId === 'image') return (
+      <TableCell key={colId} className="w-12 p-1.5">
+        {p.image_url && (
+          <img src={p.image_url} alt="" className="w-10 h-10 object-contain rounded" loading="lazy" />
+        )}
+      </TableCell>
+    )
     if (colId === 'product') return (
       <TableCell key={colId} className="min-w-[200px] max-w-[350px] truncate text-xs" title={p.product_details || ''}>{p.product_details}</TableCell>
     )

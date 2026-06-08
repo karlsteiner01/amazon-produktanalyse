@@ -139,19 +139,31 @@ export default function ProduktDetailPage() {
           )}
 
           {product.url && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="text-xs"
-              onClick={() => window.open(product.url, '_blank')}
+            <a
+              href={product.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors no-underline"
             >
-              <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+              <ExternalLink className="h-3.5 w-3.5" />
               Auf Amazon ansehen
-            </Button>
+            </a>
           )}
         </div>
 
         <div className="space-y-6">
+          {product.image_url && (
+            <Card>
+              <CardContent className="p-4 flex justify-center">
+                <img
+                  src={product.image_url}
+                  alt={product.product_details || ''}
+                  className="max-w-full h-auto max-h-48 object-contain rounded"
+                  loading="lazy"
+                />
+              </CardContent>
+            </Card>
+          )}
           {analysis && (
             <>
               <Card>
