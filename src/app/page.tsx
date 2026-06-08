@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState } from 'react'
 import { getSupabase } from "@/lib/supabase"
 import type { Product, Analysis } from '@/types'
 import { KpiCards } from '@/components/dashboard/kpi-cards'
@@ -16,10 +16,9 @@ export default function DashboardPage() {
   const [products, setProducts] = useState<ProductWithAnalysis[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const { selectedImportId, refreshImports } = useImport()
+  const { selectedImportId, switchImport, refreshImports } = useImport()
 
-  const loadData = useCallback(async () => {
-    const currentId = selectedImportId
+  async function loadData(importId: string | undefined) {
     setLoading(true)
     setError(null)
 
@@ -27,8 +26,8 @@ export default function DashboardPage() {
       .from('products')
       .select('*')
 
-    if (currentId) {
-      query = query.eq('import_id', currentId)
+    if (importId) {
+      query = query.eq('import_id', importId)
     }
 
     const { data: pData, error: pErr } = await query.order('created_at', { ascending: false })
@@ -57,11 +56,11 @@ export default function DashboardPage() {
 
     setProducts(withAnalysis)
     setLoading(false)
-  }, [selectedImportId])
+  }
 
   useEffect(() => {
-    if (selectedImportId !== undefined) loadData()
-  }, [loadData])
+    if (selectedImportId !== undefined) loadData(selectedImportId ?? undefined)
+  }, [selectedImportId])
 
   const totalSales = products.reduce((s, p) => s + (p.asin_sales ?? 0), 0)
   const totalRevenue = products.reduce((s, p) => s + (p.asin_revenue ?? 0), 0)
