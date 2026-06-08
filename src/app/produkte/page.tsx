@@ -151,7 +151,7 @@ export default function ProduktePage() {
 
   function renderCell(colId: ColumnId, p: ProductWithAnalysis) {
     if (colId === 'product') return (
-      <TableCell key="product" className="max-w-[220px] truncate text-xs">{p.product_details}</TableCell>
+      <TableCell key="product" className="min-w-[200px] max-w-[350px] truncate text-xs" title={p.product_details || ''}>{p.product_details}</TableCell>
     )
     if (colId === 'brand') return <TableCell key="brand" className="text-xs">{p.brand}</TableCell>
     if (colId === 'asin') return <TableCell key="asin" className="text-xs font-mono text-zinc-500">{p.asin}</TableCell>

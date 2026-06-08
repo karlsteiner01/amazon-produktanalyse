@@ -1,60 +1,13 @@
 'use client'
 
-import { useCallback } from 'react'
-import {
-  DndContext,
-  closestCenter,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from '@dnd-kit/core'
-import {
-  SortableContext,
-  useSortable,
-  verticalListSortingStrategy,
-  arrayMove,
-} from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
+import { useState, useCallback } from 'react'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
-import { GripVertical, Settings2 } from 'lucide-react'
-
-interface SortableItemProps {
-  id: string
-  label: string
-}
-
-function SortableItem({ id, label }: SortableItemProps) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  }
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className="flex items-center gap-2 px-3 py-2 rounded-md text-xs cursor-default hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-    >
-      <button
-        {...attributes}
-        {...listeners}
-        className="cursor-grab active:cursor-grabbing text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
-      >
-        <GripVertical className="h-3.5 w-3.5" />
-      </button>
-      <span>{label}</span>
-    </div>
-  )
-}
+import { Settings2, ChevronUp, ChevronDown } from 'lucide-react'
 
 interface ColumnReorderProps {
   columns: { id: string; label: string }[]
@@ -64,22 +17,21 @@ interface ColumnReorderProps {
 }
 
 export function ColumnReorder({ columns, order, onOrderChange, onReset }: ColumnReorderProps) {
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
-  )
+  const labelMap = new Map(columns.map(c => [c.id, c.label]))
 
-  const handleDragEnd = useCallback((event: DragEndEvent) => {
-    const { active, over } = event
-    if (!over || active.id === over.id) return
-
-    const oldIndex = order.indexOf(active.id as string)
-    const newIndex = order.indexOf(over.id as string)
-    if (oldIndex === -1 || newIndex === -1) return
-
-    onOrderChange(arrayMove(order, oldIndex, newIndex))
+  const moveUp = useCallback((index: number) => {
+    if (index <= 0) return
+    const next = [...order]
+    ;[next[index - 1], next[index]] = [next[index], next[index - 1]]
+    onOrderChange(next)
   }, [order, onOrderChange])
 
-  const labelMap = new Map(columns.map(c => [c.id, c.label]))
+  const moveDown = useCallback((index: number) => {
+    if (index >= order.length - 1) return
+    const next = [...order]
+    ;[next[index], next[index + 1]] = [next[index + 1], next[index]]
+    onOrderChange(next)
+  }, [order, onOrderChange])
 
   return (
     <DropdownMenu>
@@ -90,15 +42,32 @@ export function ColumnReorder({ columns, order, onOrderChange, onReset }: Column
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56 p-2">
         <div className="text-xs font-medium text-zinc-500 px-3 pb-1.5">Spalten anpassen</div>
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={order} strategy={verticalListSortingStrategy}>
-            <div className="space-y-0.5">
-              {order.map((id) => (
-                <SortableItem key={id} id={id} label={labelMap.get(id) || id} />
-              ))}
+        <div className="space-y-0.5">
+          {order.map((id, index) => (
+            <div
+              key={id}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-md text-xs hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+            >
+              <span className="flex-1">{labelMap.get(id) || id}</span>
+              <div className="flex gap-0.5">
+                <button
+                  onClick={(e) => { e.stopPropagation(); moveUp(index) }}
+                  disabled={index === 0}
+                  className="p-0.5 rounded text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronUp className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); moveDown(index) }}
+                  disabled={index === order.length - 1}
+                  className="p-0.5 rounded text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronDown className="h-3.5 w-3.5" />
+                </button>
+              </div>
             </div>
-          </SortableContext>
-        </DndContext>
+          ))}
+        </div>
         {onReset && (
           <Button
             variant="ghost"
