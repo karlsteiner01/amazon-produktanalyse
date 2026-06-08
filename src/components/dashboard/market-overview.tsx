@@ -36,31 +36,49 @@ export function MarketOverview({ products }: MarketOverviewProps) {
     )
   }
 
+  const detailMap: Record<string, string> = {
+    Hoch: 'Gut für dich',
+    Mittel: 'Neutral',
+    Niedrig: 'Schlecht für dich',
+  }
+
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-3">
         <Card>
           <CardContent className="p-3">
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">Nachfrage</p>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">Gesamtnachfrage</p>
             <LevelBadge level={demandLevel} goodUp />
+            <p className="text-[10px] text-zinc-400 dark:text-zinc-500 mt-1 leading-tight">
+              Basierend auf Gesamtumsatz aller Produkte. Hohe Nachfrage = viel Marktpotenzial.
+            </p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-3">
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">Konkurrenz</p>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">Konkurrenzdruck</p>
             <LevelBadge level={compLevel} goodUp={false} />
+            <p className="text-[10px] text-zinc-400 dark:text-zinc-500 mt-1 leading-tight">
+              Basierend auf durchschnittlichen Review-Zahlen. Hohe Reviews = viel Wettbewerb.
+            </p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-3">
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">FBA Dichte</p>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">FBA-Anteil</p>
             <LevelBadge level={fbaLevel} goodUp />
+            <p className="text-[10px] text-zinc-400 dark:text-zinc-500 mt-1 leading-tight">
+              Wie viele Produkte durch FBA versandt werden. Hoher FBA-Anteil = professioneller Markt.
+            </p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-3">
             <p className="text-xs text-zinc-500 dark:text-zinc-400">A-Kandidaten</p>
             <span className="text-sm font-semibold">{aCount}</span>
+            <p className="text-[10px] text-zinc-400 dark:text-zinc-500 mt-1 leading-tight">
+              Produkte mit Tier A (stark prüfenswert). Je mehr, desto besser deine Liste.
+            </p>
           </CardContent>
         </Card>
       </div>

@@ -17,10 +17,32 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Search, ArrowUpDown } from 'lucide-react'
+import { useColumnOrder } from '@/hooks/use-column-order'
+import { ColumnReorder } from '@/components/ui/column-reorder'
 
 type ProductWithAnalysis = Product & { analysis?: Analysis }
 type SortKey = 'asin_sales' | 'asin_revenue' | 'price_eur' | 'opportunity_score'
 type SortDir = 'asc' | 'desc'
+type ColumnId = 'product' | 'brand' | 'asin' | 'price_eur' | 'asin_sales' | 'asin_revenue' | 'rating' | 'review_count' | 'is_fba' | 'opportunity_score' | 'product_tier'
+
+const ALL_COLUMNS: { id: ColumnId; label: string; sortKey?: SortKey }[] = [
+  { id: 'product', label: 'Produkt' },
+  { id: 'brand', label: 'Marke' },
+  { id: 'asin', label: 'ASIN' },
+  { id: 'price_eur', label: 'Preis', sortKey: 'price_eur' },
+  { id: 'asin_sales', label: 'Verkäufe', sortKey: 'asin_sales' },
+  { id: 'asin_revenue', label: 'Umsatz', sortKey: 'asin_revenue' },
+  { id: 'rating', label: 'Rating' },
+  { id: 'review_count', label: 'Reviews' },
+  { id: 'is_fba', label: 'FBA' },
+  { id: 'opportunity_score', label: 'Score', sortKey: 'opportunity_score' },
+  { id: 'product_tier', label: 'Tier' },
+]
+
+const DEFAULT_COLUMNS: ColumnId[] = [
+  'product', 'brand', 'asin', 'price_eur', 'asin_sales', 'asin_revenue',
+  'rating', 'review_count', 'is_fba', 'opportunity_score', 'product_tier',
+]
 
 export default function ProduktePage() {
   const router = useRouter()
@@ -30,6 +52,7 @@ export default function ProduktePage() {
   const [sortKey, setSortKey] = useState<SortKey>('opportunity_score')
   const [sortDir, setSortDir] = useState<SortDir>('desc')
   const [tierFilter, setTierFilter] = useState<string>('all')
+  const { columns: columnOrder, setColumns, resetColumns } = useColumnOrder('produkte-columns', DEFAULT_COLUMNS)
 
   useEffect(() => {
     async function load() {
@@ -111,6 +134,57 @@ export default function ProduktePage() {
     )
   }
 
+  function renderHeader(colId: ColumnId) {
+    if (colId === 'product') return <TableHead key="product" className="text-xs font-medium">Produkt</TableHead>
+    if (colId === 'brand') return <TableHead key="brand" className="text-xs font-medium">Marke</TableHead>
+    if (colId === 'asin') return <TableHead key="asin" className="text-xs font-medium">ASIN</TableHead>
+    if (colId === 'price_eur') return <SortHeader key="price_eur" label="Preis" sortKey="price_eur" />
+    if (colId === 'asin_sales') return <SortHeader key="asin_sales" label="Verkäufe" sortKey="asin_sales" />
+    if (colId === 'asin_revenue') return <SortHeader key="asin_revenue" label="Umsatz" sortKey="asin_revenue" />
+    if (colId === 'rating') return <TableHead key="rating" className="text-xs font-medium text-right">Rating</TableHead>
+    if (colId === 'review_count') return <TableHead key="review_count" className="text-xs font-medium text-right">Reviews</TableHead>
+    if (colId === 'is_fba') return <TableHead key="is_fba" className="text-xs font-medium text-right">FBA</TableHead>
+    if (colId === 'opportunity_score') return <SortHeader key="opportunity_score" label="Score" sortKey="opportunity_score" />
+    if (colId === 'product_tier') return <TableHead key="product_tier" className="text-xs font-medium text-right">Tier</TableHead>
+    return null
+  }
+
+  function renderCell(colId: ColumnId, p: ProductWithAnalysis) {
+    if (colId === 'product') return (
+      <TableCell key="product" className="max-w-[220px] truncate text-xs">{p.product_details}</TableCell>
+    )
+    if (colId === 'brand') return <TableCell key="brand" className="text-xs">{p.brand}</TableCell>
+    if (colId === 'asin') return <TableCell key="asin" className="text-xs font-mono text-zinc-500">{p.asin}</TableCell>
+    if (colId === 'price_eur') return <TableCell key="price_eur" className="text-xs text-right">{formatEur(p.price_eur)}</TableCell>
+    if (colId === 'asin_sales') return <TableCell key="asin_sales" className="text-xs text-right">{formatNumber(p.asin_sales)}</TableCell>
+    if (colId === 'asin_revenue') return <TableCell key="asin_revenue" className="text-xs text-right">{formatEur(p.asin_revenue)}</TableCell>
+    if (colId === 'rating') return <TableCell key="rating" className="text-xs text-right">{p.rating ?? '–'}</TableCell>
+    if (colId === 'review_count') return <TableCell key="review_count" className="text-xs text-right">{formatNumber(p.review_count)}</TableCell>
+    if (colId === 'is_fba') return (
+      <TableCell key="is_fba" className="text-xs text-right">
+        {p.is_fba ? <span className="text-green-600 dark:text-green-400">Ja</span> : <span className="text-zinc-400">Nein</span>}
+      </TableCell>
+    )
+    if (colId === 'opportunity_score') return (
+      <TableCell key="opportunity_score" className="text-xs text-right font-medium">{p.analysis?.opportunity_score ?? '–'}</TableCell>
+    )
+    if (colId === 'product_tier') return (
+      <TableCell key="product_tier" className="text-xs text-right">
+        {p.analysis?.product_tier && (
+          <Badge
+            style={{
+              backgroundColor: tierColor(p.analysis.product_tier) + '20',
+              color: tierColor(p.analysis.product_tier),
+              borderColor: tierColor(p.analysis.product_tier) + '40',
+            }}
+            variant="outline"
+          >{tierLabel(p.analysis.product_tier)}</Badge>
+        )}
+      </TableCell>
+    )
+    return null
+  }
+
   if (loading) {
     return (
       <div>
@@ -122,7 +196,15 @@ export default function ProduktePage() {
 
   return (
     <div>
-      <h2 className="text-lg font-semibold mb-6">Produkte</h2>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-lg font-semibold">Produkte</h2>
+        <ColumnReorder
+          columns={ALL_COLUMNS}
+          order={columnOrder}
+          onOrderChange={setColumns}
+          onReset={resetColumns}
+        />
+      </div>
 
       <div className="flex items-center gap-3 mb-4">
         <div className="relative flex-1 max-w-xs">
@@ -150,21 +232,11 @@ export default function ProduktePage() {
         <p className="text-xs text-zinc-400 ml-auto">{filtered.length} Produkte</p>
       </div>
 
-      <div className="border rounded-lg overflow-hidden">
+      <div className="border rounded-lg overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow className="bg-zinc-50 dark:bg-zinc-800/50">
-              <TableHead className="text-xs font-medium">Produkt</TableHead>
-              <TableHead className="text-xs font-medium">Marke</TableHead>
-              <TableHead className="text-xs font-medium">ASIN</TableHead>
-              <SortHeader label="Preis" sortKey="price_eur" />
-              <SortHeader label="Verkäufe" sortKey="asin_sales" />
-              <SortHeader label="Umsatz" sortKey="asin_revenue" />
-              <TableHead className="text-xs font-medium text-right">Rating</TableHead>
-              <TableHead className="text-xs font-medium text-right">Reviews</TableHead>
-              <TableHead className="text-xs font-medium text-right">FBA</TableHead>
-              <SortHeader label="Score" sortKey="opportunity_score" />
-              <TableHead className="text-xs font-medium text-right">Tier</TableHead>
+              {columnOrder.map((colId) => renderHeader(colId as ColumnId))}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -174,40 +246,7 @@ export default function ProduktePage() {
                 className="cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors"
                 onClick={() => router.push(`/produkte/${p.id}`)}
               >
-                <TableCell className="max-w-[220px] truncate text-xs">
-                  {p.product_details}
-                </TableCell>
-                <TableCell className="text-xs">{p.brand}</TableCell>
-                <TableCell className="text-xs font-mono text-zinc-500">{p.asin}</TableCell>
-                <TableCell className="text-xs text-right">{formatEur(p.price_eur)}</TableCell>
-                <TableCell className="text-xs text-right">{formatNumber(p.asin_sales)}</TableCell>
-                <TableCell className="text-xs text-right">{formatEur(p.asin_revenue)}</TableCell>
-                <TableCell className="text-xs text-right">{p.rating ?? '–'}</TableCell>
-                <TableCell className="text-xs text-right">{formatNumber(p.review_count)}</TableCell>
-                <TableCell className="text-xs text-right">
-                  {p.is_fba ? (
-                    <span className="text-green-600 dark:text-green-400">Ja</span>
-                  ) : (
-                    <span className="text-zinc-400">Nein</span>
-                  )}
-                </TableCell>
-                <TableCell className="text-xs text-right font-medium">
-                  {p.analysis?.opportunity_score ?? '–'}
-                </TableCell>
-                <TableCell className="text-xs text-right">
-                  {p.analysis?.product_tier && (
-                    <Badge
-                      style={{
-                        backgroundColor: tierColor(p.analysis.product_tier) + '20',
-                        color: tierColor(p.analysis.product_tier),
-                        borderColor: tierColor(p.analysis.product_tier) + '40',
-                      }}
-                      variant="outline"
-                    >
-                      {tierLabel(p.analysis.product_tier)}
-                    </Badge>
-                  )}
-                </TableCell>
+                {columnOrder.map((colId) => renderCell(colId as ColumnId, p))}
               </TableRow>
             ))}
           </TableBody>

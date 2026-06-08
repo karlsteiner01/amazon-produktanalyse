@@ -25,6 +25,7 @@ export default function AnalysenPage() {
       const { data: aData } = await (getSupabase() as any)
         .from('analyses')
         .select('*')
+        .order('opportunity_score', { ascending: false })
         .order('created_at', { ascending: false })
 
       if (!aData || aData.length === 0) {
@@ -96,7 +97,7 @@ export default function AnalysenPage() {
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-3 mb-1">
-                    <span className="text-xs text-zinc-400">#{analyses.length - idx}</span>
+                    <span className="text-xs text-zinc-400">#{idx + 1}</span>
                     <h3
                       className="text-sm font-medium truncate cursor-pointer hover:text-blue-600 transition-colors"
                       onClick={() => a.product && router.push(`/produkte/${a.product_id}`)}
