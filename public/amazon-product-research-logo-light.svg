@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="168" viewBox="0 0 420 168" role="img" aria-labelledby="title desc">
+  <title id="title">Amazon Product Research</title>
+  <desc id="desc">Logo fuer die Amazon Produktanalyse App im hellen Modus</desc>
+  <defs>
+    <filter id="softShadow" x="-12%" y="-12%" width="124%" height="124%">
+      <feDropShadow dx="0" dy="2" stdDeviation="1.6" flood-color="#111827" flood-opacity="0.18"/>
+    </filter>
+    <linearGradient id="orange" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#ffc857"/>
+      <stop offset="0.45" stop-color="#f59e0b"/>
+      <stop offset="1" stop-color="#c85f1d"/>
+    </linearGradient>
+    <linearGradient id="slate" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#4b5563"/>
+      <stop offset="1" stop-color="#111827"/>
+    </linearGradient>
+    <linearGradient id="warmText" x1="0" x2="1" y1="0" y2="0">
+      <stop offset="0" stop-color="#c46322"/>
+      <stop offset="1" stop-color="#5f3a15"/>
+    </linearGradient>
+  </defs>
+  <g filter="url(#softShadow)">
+    <text x="38" y="73" font-family="Arial Black, Arial, sans-serif" font-size="64" font-weight="900" letter-spacing="-4">
+      <tspan fill="url(#slate)">am</tspan><tspan fill="url(#orange)">a</tspan><tspan fill="url(#slate)">zon</tspan>
+    </text>
+    <text x="48" y="115" font-family="Arial, sans-serif" font-size="34" font-weight="800" letter-spacing="-1" fill="url(#warmText)">
+      Product Research
+    </text>
+    <path d="M128 132c42 22 123 23 168-3" fill="none" stroke="url(#orange)" stroke-width="10" stroke-linecap="round"/>
+    <path d="M288 118l28 6-15 24" fill="none" stroke="#f59e0b" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>

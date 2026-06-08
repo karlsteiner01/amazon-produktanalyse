@@ -2,8 +2,34 @@ import { createClient } from '@supabase/supabase-js'
 
 let client: ReturnType<typeof createClient> | null = null
 
-export function getSupabase() {
-  if (client) return client
+interface SupabaseErrorLike {
+  message: string
+}
+
+interface QueryResult {
+  data: unknown
+  error: SupabaseErrorLike | null
+}
+
+interface LooseQuery extends PromiseLike<QueryResult> {
+  select(columns?: string): LooseQuery
+  insert(values: unknown): LooseQuery
+  update(values: unknown): LooseQuery
+  upsert(values: unknown, options?: unknown): LooseQuery
+  delete(): LooseQuery
+  eq(column: string, value: unknown): LooseQuery
+  in(column: string, values: readonly unknown[]): LooseQuery
+  order(column: string, options?: unknown): LooseQuery
+  limit(count: number): LooseQuery
+  single(): LooseQuery
+}
+
+interface LooseSupabaseClient {
+  from(table: string): LooseQuery
+}
+
+export function getSupabase(): LooseSupabaseClient {
+  if (client) return client as unknown as LooseSupabaseClient
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -13,5 +39,5 @@ export function getSupabase() {
   }
 
   client = createClient(url, key)
-  return client
+  return client as unknown as LooseSupabaseClient
 }

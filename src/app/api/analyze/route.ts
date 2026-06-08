@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { computeScores } from '@/lib/scoring'
-import type { CsvParsedProduct } from '@/types'
+import type { CsvParsedProduct, Product } from '@/types'
 
 export async function POST() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -21,7 +21,8 @@ export async function POST() {
     return NextResponse.json({ error: error?.message || 'Keine Produkte' }, { status: 500 })
   }
 
-  const parsed: CsvParsedProduct[] = products.map((p: any) => ({
+  const productRows = (products || []) as unknown as Product[]
+  const parsed: CsvParsedProduct[] = productRows.map((p) => ({
     product_details: p.product_details || '',
     asin: p.asin || '',
     url: p.url || '',
@@ -51,7 +52,7 @@ export async function POST() {
   const scores = computeScores(parsed)
   let created = 0
 
-  for (const p of products) {
+  for (const p of productRows) {
     const s = scores.get(p.asin)
     if (!s) continue
 
@@ -75,7 +76,7 @@ export async function POST() {
 
   return NextResponse.json({
     success: true,
-    products: products.length,
+    products: productRows.length,
     analyses_created: created,
   })
 }

@@ -21,9 +21,6 @@ export function computeScores(products: CsvParsedProduct[]): Map<string, Product
   const bsrValues = products.map((p) => p.bsr ?? 0)
   const reviewValues = products.map((p) => p.review_count ?? 0)
   const sellerValues = products.map((p) => p.active_sellers ?? 1)
-  const priceValues = products.map((p) => p.price_eur ?? 0)
-  const ratingValues = products.map((p) => p.rating ?? 4.0)
-
   const salesMax = Math.max(...salesValues, 1)
   const salesMin = Math.min(...salesValues, 0)
   const salesRange = salesMax - salesMin || 1

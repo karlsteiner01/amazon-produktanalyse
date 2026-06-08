@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
-import { ArrowLeft, ExternalLink } from 'lucide-react'
+import { ArrowLeft, ExternalLink, Euro, Lightbulb, Package, ShieldAlert, ShoppingCart, Star } from 'lucide-react'
 import dynamic from 'next/dynamic'
 
 const RadarChart = dynamic(() => import('@/components/analysis/radar-chart'), { ssr: false })
@@ -23,32 +23,47 @@ export default function ProduktDetailPage() {
 
   useEffect(() => {
     async function load() {
-      const { data: pData } = await (getSupabase() as any)
+      const { data: pData } = await getSupabase()
         .from('products')
         .select('*')
         .eq('id', params.id as string)
         .single()
 
-      const { data: aData } = await (getSupabase() as any)
+      const { data: aData } = await getSupabase()
         .from('analyses')
         .select('*')
         .eq('product_id', params.id as string)
         .order('created_at', { ascending: false })
         .limit(1)
 
-      setProduct(pData)
-      if (aData && aData.length > 0) setAnalysis(aData[0])
+      setProduct(pData as unknown as Product | null)
+      const analysisRows = (aData || []) as unknown as Analysis[]
+      if (analysisRows.length > 0) setAnalysis(analysisRows[0])
       setLoading(false)
     }
     load()
   }, [params.id])
 
   if (loading) {
-    return <p className="text-sm text-zinc-500">Lade Produkt...</p>
+    return (
+      <div className="space-y-6">
+        <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-xs" onClick={() => router.push('/produkte')}>
+          <ArrowLeft className="size-3.5" />
+          Zurück
+        </Button>
+        <div className="panel p-8">
+          <p className="text-sm text-muted-foreground">Lade Produkt...</p>
+        </div>
+      </div>
+    )
   }
 
   if (!product) {
-    return <p className="text-sm text-zinc-500">Produkt nicht gefunden.</p>
+    return (
+      <div className="panel p-8">
+        <p className="text-sm text-muted-foreground">Produkt nicht gefunden.</p>
+      </div>
+    )
   }
 
   const formatEur = (v: number | null) =>
@@ -73,27 +88,38 @@ export default function ProduktDetailPage() {
     { label: 'Kategorie', value: product.category ?? '–' },
     { label: 'Verkäufer', value: product.seller ?? '–' },
   ]
+  const quickStats = [
+    { label: 'Preis', value: formatEur(product.price_eur), icon: Euro, tone: 'text-amber-600 dark:text-amber-300' },
+    { label: 'Verkäufe', value: formatNumber(product.asin_sales), icon: ShoppingCart, tone: 'text-emerald-600 dark:text-emerald-300' },
+    { label: 'Umsatz', value: formatEur(product.asin_revenue), icon: Package, tone: 'text-sky-600 dark:text-sky-300' },
+    { label: 'Rating', value: product.rating ? `${product.rating}` : '–', icon: Star, tone: 'text-rose-600 dark:text-rose-300' },
+  ]
+  const scoreRows = analysis ? [
+    { label: 'Nachfrage', value: analysis.demand_score },
+    { label: 'Umsatzpotenzial', value: analysis.revenue_score },
+    { label: 'Konkurrenz', value: analysis.competition_score },
+    { label: 'Marge', value: analysis.margin_score },
+    { label: 'Verbesserbarkeit', value: analysis.improvement_score },
+    { label: 'Risiko', value: analysis.risk_score },
+  ] : []
 
   return (
-    <div>
+    <div className="space-y-6">
       <Button
         variant="ghost"
         size="sm"
-        className="mb-4 text-xs"
+        className="h-8 gap-1.5 text-xs"
         onClick={() => router.push('/produkte')}
       >
-        <ArrowLeft className="h-3.5 w-3.5 mr-1.5" />
+        <ArrowLeft className="size-3.5" />
         Zurück
       </Button>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          <div>
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h2 className="text-lg font-semibold mb-1">{product.product_details}</h2>
-                <p className="text-sm text-zinc-500">{product.brand}</p>
-              </div>
+      <section className="panel overflow-hidden">
+        <div className="grid gap-6 p-5 lg:grid-cols-[1fr_260px] lg:p-6">
+          <div className="min-w-0">
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <Badge variant="outline" className="border-border bg-muted/50 text-muted-foreground">{product.asin}</Badge>
               {analysis && (
                 <Badge
                   style={{
@@ -102,24 +128,69 @@ export default function ProduktDetailPage() {
                     borderColor: tierColor(analysis.product_tier) + '40',
                   }}
                   variant="outline"
-                  className="text-xs shrink-0"
+                  className="text-xs"
                 >
                   {tierLabel(analysis.product_tier)}
                 </Badge>
               )}
             </div>
+            <h2 className="max-w-4xl text-2xl font-semibold leading-tight sm:text-3xl">{product.product_details}</h2>
+            <p className="mt-2 text-sm text-muted-foreground">{product.brand || 'Keine Marke'} - {product.category || 'Keine Kategorie'}</p>
+            <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              {quickStats.map((stat) => {
+                const Icon = stat.icon
+                return (
+                  <div key={stat.label} className="rounded-lg border border-border bg-muted/25 p-3">
+                    <div className="flex items-center gap-2">
+                      <Icon className={`size-4 ${stat.tone}`} />
+                      <p className="text-xs text-muted-foreground">{stat.label}</p>
+                    </div>
+                    <p className="mt-2 text-lg font-semibold">{stat.value}</p>
+                  </div>
+                )
+              })}
+            </div>
           </div>
+          <div className="flex items-center justify-center rounded-lg border border-border bg-white p-4 dark:bg-muted/30">
+            {product.image_url ? (
+              <img
+                src={product.image_url}
+                alt={product.product_details || ''}
+                className="max-h-56 max-w-full object-contain"
+                loading="lazy"
+              />
+            ) : (
+              <Package className="size-12 text-muted-foreground" />
+            )}
+          </div>
+        </div>
+        {product.url && (
+          <div className="flex justify-end border-t border-border/80 bg-muted/30 px-5 py-3 lg:px-6">
+            <a
+              href={product.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-background px-3 text-xs font-medium transition-colors hover:bg-muted"
+            >
+              <ExternalLink className="size-3.5" />
+              Auf Amazon ansehen
+            </a>
+          </div>
+        )}
+      </section>
 
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="space-y-6 lg:col-span-2">
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Produktinformationen</CardTitle>
+              <CardTitle className="text-sm font-semibold">Produktinformationen</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-2">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
                 {infoFields.map((f) => (
-                  <div key={f.label} className="flex justify-between py-1">
-                    <span className="text-xs text-zinc-500">{f.label}</span>
-                    <span className="text-xs font-medium">{f.value}</span>
+                  <div key={f.label} className="rounded-md border border-border/70 bg-muted/25 px-3 py-2">
+                    <span className="block text-xs text-muted-foreground">{f.label}</span>
+                    <span className="mt-1 block truncate text-xs font-medium">{f.value}</span>
                   </div>
                 ))}
               </div>
@@ -129,66 +200,35 @@ export default function ProduktDetailPage() {
           {analysis?.full_analysis && (
             <>
               <Separator />
-              <div>
-                <h3 className="text-sm font-medium mb-3">KI-Analyse</h3>
-                <div className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed whitespace-pre-line">
+              <section className="panel p-5">
+                <h3 className="text-sm font-semibold">KI-Analyse</h3>
+                <div className="mt-3 whitespace-pre-line text-sm leading-7 text-muted-foreground">
                   {analysis.full_analysis}
                 </div>
-              </div>
+              </section>
             </>
-          )}
-
-          {product.url && (
-            <a
-              href={product.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors no-underline"
-            >
-              <ExternalLink className="h-3.5 w-3.5" />
-              Auf Amazon ansehen
-            </a>
           )}
         </div>
 
         <div className="space-y-6">
-          {product.image_url && (
-            <Card>
-              <CardContent className="p-4 flex justify-center">
-                <img
-                  src={product.image_url}
-                  alt={product.product_details || ''}
-                  className="max-w-full h-auto max-h-48 object-contain rounded"
-                  loading="lazy"
-                />
-              </CardContent>
-            </Card>
-          )}
           {analysis && (
             <>
-              <Card>
+              <Card className="metric-card">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium">Score</CardTitle>
+                  <CardTitle className="text-sm font-semibold">Opportunity Score</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="text-center mb-4">
-                    <p className="text-3xl font-bold" style={{ color: tierColor(analysis.product_tier) }}>
+                    <p className="text-5xl font-bold" style={{ color: tierColor(analysis.product_tier) }}>
                       {analysis.opportunity_score}
                     </p>
-                    <p className="text-xs text-zinc-500 mt-1">/ 100</p>
+                    <p className="text-xs text-muted-foreground mt-1">/ 100</p>
                   </div>
                   <Separator className="my-3" />
                   <div className="space-y-2">
-                    {[
-                      { label: 'Nachfrage', value: analysis.demand_score },
-                      { label: 'Umsatzpotenzial', value: analysis.revenue_score },
-                      { label: 'Konkurrenz', value: analysis.competition_score },
-                      { label: 'Marge', value: analysis.margin_score },
-                      { label: 'Verbesserbarkeit', value: analysis.improvement_score },
-                      { label: 'Risiko', value: analysis.risk_score },
-                    ].map((s) => (
+                    {scoreRows.map((s) => (
                       <div key={s.label} className="flex justify-between text-xs">
-                        <span className="text-zinc-500">{s.label}</span>
+                        <span className="text-muted-foreground">{s.label}</span>
                         <span className="font-medium">{s.value}</span>
                       </div>
                     ))}
@@ -201,15 +241,18 @@ export default function ProduktDetailPage() {
           )}
 
           {analysis?.improvement_ideas && analysis.improvement_ideas.length > 0 && (
-            <Card>
+            <Card className="metric-card">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Verbesserungsideen</CardTitle>
+                <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                  <Lightbulb className="size-4 text-amber-500" />
+                  Verbesserungsideen
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-1.5">
                   {analysis.improvement_ideas.map((idea, i) => (
-                    <li key={i} className="text-xs text-zinc-600 dark:text-zinc-400 flex gap-2">
-                      <span className="text-blue-500 shrink-0">–</span>
+                    <li key={i} className="flex gap-2 text-xs leading-5 text-muted-foreground">
+                      <span className="shrink-0 text-primary">–</span>
                       {idea}
                     </li>
                   ))}
@@ -219,15 +262,18 @@ export default function ProduktDetailPage() {
           )}
 
           {analysis?.risks && analysis.risks.length > 0 && (
-            <Card>
+            <Card className="metric-card">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Risiken</CardTitle>
+                <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                  <ShieldAlert className="size-4 text-destructive" />
+                  Risiken
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-1.5">
                   {analysis.risks.map((risk, i) => (
-                    <li key={i} className="text-xs text-zinc-600 dark:text-zinc-400 flex gap-2">
-                      <span className="text-red-500 shrink-0">–</span>
+                    <li key={i} className="flex gap-2 text-xs leading-5 text-muted-foreground">
+                      <span className="shrink-0 text-destructive">–</span>
                       {risk}
                     </li>
                   ))}

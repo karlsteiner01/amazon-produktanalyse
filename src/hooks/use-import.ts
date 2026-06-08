@@ -10,47 +10,70 @@ export function useImport() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    async function load() {
-      const { data } = await (getSupabase() as any)
-        .from('csv_imports')
-        .select('*')
-        .order('created_at', { ascending: false })
+    let cancelled = false
 
-      if (data && data.length > 0) {
-        setImports(data)
-        const stored = localStorage.getItem('selected-import-id')
-        const exists = stored ? data.some((i: CsvImport) => i.id === stored) : false
-        setSelectedImportId(exists ? stored : data[0].id)
-      } else {
+    async function load() {
+      try {
+        const { data } = await getSupabase()
+          .from('csv_imports')
+          .select('*')
+          .order('created_at', { ascending: false })
+
+        if (cancelled) return
+
+        const importRows = (data || []) as unknown as CsvImport[]
+        if (importRows.length > 0) {
+          setImports(importRows)
+          const stored = localStorage.getItem('selected-import-id')
+          const exists = stored ? importRows.some((i) => i.id === stored) : false
+          setSelectedImportId(stored === 'all' || !stored ? null : exists ? stored : null)
+        } else {
+          setSelectedImportId(null)
+        }
+      } catch {
+        if (cancelled) return
+        setImports([])
         setSelectedImportId(null)
+      } finally {
+        if (!cancelled) setLoading(false)
       }
-      setLoading(false)
     }
-    load()
+
+    void load()
+
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   useEffect(() => {
     if (selectedImportId) {
       localStorage.setItem('selected-import-id', selectedImportId)
+    } else {
+      localStorage.setItem('selected-import-id', 'all')
     }
   }, [selectedImportId])
 
-  const switchImport = useCallback((id: string) => {
+  const switchImport = useCallback((id: string | null) => {
     setSelectedImportId(id)
   }, [])
 
   const refreshImports = useCallback(async (newImportId?: string) => {
-    const { data } = await (getSupabase() as any)
-      .from('csv_imports')
-      .select('*')
-      .order('created_at', { ascending: false })
+    try {
+      const { data } = await getSupabase()
+        .from('csv_imports')
+        .select('*')
+        .order('created_at', { ascending: false })
 
-    if (data) {
-      setImports(data)
-      if (newImportId) {
-        setSelectedImportId(newImportId)
-        localStorage.setItem('selected-import-id', newImportId)
+      if (data) {
+        setImports((data || []) as unknown as CsvImport[])
+        if (newImportId) {
+          setSelectedImportId(newImportId)
+          localStorage.setItem('selected-import-id', newImportId)
+        }
       }
+    } catch {
+      setImports([])
     }
   }, [])
 

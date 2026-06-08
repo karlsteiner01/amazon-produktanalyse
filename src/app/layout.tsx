@@ -1,10 +1,9 @@
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
 import { ThemeProvider } from '@/lib/theme-provider'
 import { Sidebar } from '@/components/layout/sidebar'
+import { ModeToggle } from '@/components/layout/mode-toggle'
+import { AppLogo } from '@/components/layout/app-logo'
 import './globals.css'
-
-const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'Amazon Produktanalyse',
@@ -18,17 +17,28 @@ export default function RootLayout({
 }) {
   return (
     <html lang="de" suppressHydrationWarning>
-      <body className={inter.className}>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-          <div className="flex min-h-screen">
+      <body>
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
+          <div className="min-h-screen">
             <Sidebar />
-            <main className="ml-56 flex-1 bg-zinc-50 dark:bg-zinc-900 min-h-screen">
-              <div className="h-14 border-b bg-white dark:bg-zinc-950 dark:border-zinc-800 flex items-center px-6">
-                <h1 className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
-                  Amazon Produktanalyse
-                </h1>
+            <main className="min-h-screen bg-background pb-24 lg:pl-72 lg:pb-0">
+              <div className="sticky top-0 z-20 border-b border-border bg-card/90 backdrop-blur-xl">
+                <div className="flex min-h-16 items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <AppLogo compact className="lg:hidden" />
+                    <div className="hidden min-w-0 lg:block">
+                      <p className="text-[11px] font-semibold uppercase text-muted-foreground">
+                        Seller Research
+                      </p>
+                      <h1 className="truncate text-sm font-semibold sm:text-base">
+                        Amazon Produktanalyse
+                      </h1>
+                    </div>
+                  </div>
+                  <ModeToggle />
+                </div>
               </div>
-              <div className="p-6">
+              <div className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
                 {children}
               </div>
             </main>

@@ -4,14 +4,12 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
-import { Separator } from '@/components/ui/separator'
-import { ModeToggle } from './mode-toggle'
+import { AppLogo } from '@/components/layout/app-logo'
 import {
   LayoutDashboard,
   Package,
   FileText,
   Upload,
-  LineChart,
 } from 'lucide-react'
 
 const NAV_ITEMS = [
@@ -25,38 +23,41 @@ export function Sidebar() {
   const pathname = usePathname()
 
   return (
-    <aside className="fixed left-0 top-0 z-30 flex h-full w-56 flex-col border-r bg-white dark:bg-zinc-950 dark:border-zinc-800">
-      <div className="flex h-14 items-center gap-2 border-b px-5 dark:border-zinc-800">
-        <LineChart className="h-5 w-5 text-blue-600" />
-        <span className="font-semibold text-sm">Amazon Produktanalyse</span>
+    <aside className="fixed inset-x-3 bottom-3 z-40 flex rounded-lg border border-border bg-card shadow-lg shadow-slate-950/10 dark:shadow-black/30 lg:inset-y-0 lg:left-0 lg:right-auto lg:bottom-auto lg:w-72 lg:flex-col lg:rounded-none lg:border-y-0 lg:border-l-0 lg:bg-sidebar lg:text-sidebar-foreground lg:shadow-none">
+      <div className="hidden border-b border-sidebar-border px-5 py-5 lg:block">
+        <AppLogo />
       </div>
 
-      <nav className="flex-1 space-y-1 p-3">
+      <nav className="grid flex-1 grid-cols-4 gap-1 p-1.5 lg:block lg:space-y-1.5 lg:p-3">
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon
-          const isActive = pathname === item.href
+          const isActive = item.href === '/'
+            ? pathname === item.href
+            : pathname === item.href || pathname.startsWith(`${item.href}/`)
           return (
-            <Link key={item.href} href={item.href}>
+            <Link key={item.href} href={item.href} className="min-w-0">
               <Button
-                variant={isActive ? 'secondary' : 'ghost'}
+                variant="ghost"
                 className={cn(
-                  'w-full justify-start gap-3 text-sm font-normal h-9',
-                  isActive && 'bg-zinc-100 dark:bg-zinc-800 font-medium'
+                  'h-14 w-full flex-col gap-1 rounded-md px-1 text-[11px] font-medium text-muted-foreground lg:h-10 lg:flex-row lg:justify-start lg:gap-3 lg:px-3 lg:text-sm lg:text-muted-foreground dark:lg:text-sidebar-foreground/68',
+                  isActive && 'bg-primary/15 text-foreground lg:bg-sidebar-accent lg:text-sidebar-accent-foreground'
                 )}
               >
-                <Icon className="h-4 w-4" />
-                {item.label}
+                <Icon className={cn('size-4', isActive && 'text-primary lg:text-sidebar-primary')} />
+                <span className="truncate">{item.label}</span>
               </Button>
             </Link>
           )
         })}
       </nav>
 
-      <Separator />
-
-      <div className="flex items-center justify-between p-3">
-        <span className="text-xs text-zinc-400">v1.0</span>
-        <ModeToggle />
+      <div className="hidden border-t border-sidebar-border p-4 lg:block">
+        <div className="rounded-lg border border-sidebar-border bg-muted/45 p-3 dark:bg-white/5">
+          <p className="text-xs font-medium">v1.0</p>
+          <p className="mt-1 text-xs text-muted-foreground dark:text-sidebar-foreground/55">
+            Lokale CSV-Analyse mit Supabase-Speicher.
+          </p>
+        </div>
       </div>
     </aside>
   )

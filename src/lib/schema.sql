@@ -1,7 +1,7 @@
 -- Supabase SQL Schema for Amazon Produktanalyse
 -- Run this in the Supabase SQL Editor
 
-CREATE TABLE products (
+CREATE TABLE IF NOT EXISTS products (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   created_at TIMESTAMPTZ DEFAULT now(),
   asin TEXT NOT NULL,
@@ -32,7 +32,7 @@ CREATE TABLE products (
   UNIQUE(asin)
 );
 
-CREATE TABLE analyses (
+CREATE TABLE IF NOT EXISTS analyses (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   created_at TIMESTAMPTZ DEFAULT now(),
   product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
@@ -52,7 +52,7 @@ CREATE TABLE analyses (
   risk_score INTEGER DEFAULT 0
 );
 
-CREATE TABLE csv_imports (
+CREATE TABLE IF NOT EXISTS csv_imports (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   created_at TIMESTAMPTZ DEFAULT now(),
   filename TEXT NOT NULL,
@@ -62,12 +62,12 @@ CREATE TABLE csv_imports (
 );
 
 -- Indexes
-CREATE INDEX idx_products_asin ON products(asin);
-CREATE INDEX idx_products_brand ON products(brand);
-CREATE INDEX idx_products_created ON products(created_at DESC);
-CREATE INDEX idx_analyses_product ON analyses(product_id);
-CREATE INDEX idx_analyses_score ON analyses(opportunity_score DESC);
-CREATE INDEX idx_analyses_created ON analyses(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_products_asin ON products(asin);
+CREATE INDEX IF NOT EXISTS idx_products_brand ON products(brand);
+CREATE INDEX IF NOT EXISTS idx_products_created ON products(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_analyses_product ON analyses(product_id);
+CREATE INDEX IF NOT EXISTS idx_analyses_score ON analyses(opportunity_score DESC);
+CREATE INDEX IF NOT EXISTS idx_analyses_created ON analyses(created_at DESC);
 
 -- Row Level Security (for public access with anon key)
 ALTER TABLE products ENABLE ROW LEVEL SECURITY;
@@ -75,6 +75,9 @@ ALTER TABLE analyses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE csv_imports ENABLE ROW LEVEL SECURITY;
 
 -- Allow all operations for anon key (since this is a single-user app)
+DROP POLICY IF EXISTS "Allow all products" ON products;
+DROP POLICY IF EXISTS "Allow all analyses" ON analyses;
+DROP POLICY IF EXISTS "Allow all imports" ON csv_imports;
 CREATE POLICY "Allow all products" ON products FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all analyses" ON analyses FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all imports" ON csv_imports FOR ALL USING (true) WITH CHECK (true);

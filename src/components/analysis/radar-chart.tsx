@@ -25,15 +25,20 @@ export default function RadarChart({ analysis }: RadarChartProps) {
   ]
 
   return (
-    <div className="border rounded-lg p-4">
-      <h4 className="text-xs font-medium text-zinc-500 mb-3">Score Radar</h4>
+    <div className="panel p-4">
+      <div className="mb-3">
+        <h4 className="text-sm font-semibold">Score Radar</h4>
+        <p className="mt-1 text-xs leading-5 text-muted-foreground">
+          Je weiter die Fläche nach außen geht, desto stärker ist der Kandidat in diesem Bereich.
+        </p>
+      </div>
       <div className="h-64">
         <ResponsiveContainer width="100%" height="100%">
           <RechartsRadar data={data}>
-            <PolarGrid stroke="hsl(var(--border))" />
+            <PolarGrid stroke="var(--border)" />
             <PolarAngleAxis
               dataKey="category"
-              tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+              tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }}
             />
             <PolarRadiusAxis
               angle={90}
@@ -44,13 +49,21 @@ export default function RadarChart({ analysis }: RadarChartProps) {
             <Radar
               name="Score"
               dataKey="value"
-              stroke="#2563eb"
-              fill="#2563eb"
-              fillOpacity={0.15}
-              strokeWidth={1.5}
+              stroke="var(--primary)"
+              fill="var(--primary)"
+              fillOpacity={0.18}
+              strokeWidth={2}
             />
           </RechartsRadar>
         </ResponsiveContainer>
+      </div>
+      <div className="mt-4 rounded-lg border border-border bg-muted/25 p-3">
+        <p className="text-xs font-semibold">So liest du den Radar</p>
+        <div className="mt-2 grid gap-2 text-xs leading-5 text-muted-foreground">
+          <p>0 bedeutet schwach, 100 bedeutet stark. Eine große, gleichmäßige Fläche ist besser als ein einzelner Ausreißer.</p>
+          <p>Nachfrage, Umsatz und Marge zeigen die Marktstärke. Konkurrenz ist hoch, wenn der Druck durch Reviews und Verkäufer geringer ist.</p>
+          <p>Verbesserung zeigt, ob du dich mit einem besseren Produkt absetzen kannst. Risiko ist hoch, wenn das Produkt eher gut handhabbar wirkt.</p>
+        </div>
       </div>
     </div>
   )

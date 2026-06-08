@@ -1,24 +1,25 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { parseCsvText, parseCsvRows } from '@/lib/csv-parser'
 import { computeScores } from '@/lib/scoring'
 import { getSupabase } from "@/lib/supabase"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
-import { Upload, FileText, CheckCircle, AlertCircle } from 'lucide-react'
+import { Upload, FileText, CheckCircle, AlertCircle, FileSpreadsheet } from 'lucide-react'
+import type { CsvImport, Product } from '@/types'
 
 interface UploadCsvProps {
   onImport: (importId?: string) => void
 }
 
 export function UploadCsv({ onImport }: UploadCsvProps) {
-  const [importing, setImporting] = useState(false)
   const [progress, setProgress] = useState(0)
   const [status, setStatus] = useState<'idle' | 'parsing' | 'importing' | 'done' | 'error'>('idle')
   const [message, setMessage] = useState('')
   const [dragOver, setDragOver] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   const handleFile = useCallback(async (file: File) => {
     if (!file.name.endsWith('.csv')) {
@@ -27,7 +28,6 @@ export function UploadCsv({ onImport }: UploadCsvProps) {
       return
     }
 
-    setImporting(true)
     setStatus('parsing')
     setProgress(10)
 
@@ -39,14 +39,13 @@ export function UploadCsv({ onImport }: UploadCsvProps) {
       if (products.length === 0) {
         setStatus('error')
         setMessage('Keine Produkte in der CSV gefunden')
-        setImporting(false)
         return
       }
 
       setProgress(30)
       setStatus('importing')
 
-      const { data: importRecord, error: importErr } = await (getSupabase() as any)
+      const { data: importRecord, error: importErr } = await getSupabase()
         .from('csv_imports')
         .insert({
           filename: file.name,
@@ -57,14 +56,15 @@ export function UploadCsv({ onImport }: UploadCsvProps) {
 
       if (importErr) throw importErr
 
-      const importId = importRecord?.[0]?.id
+      const importRows = (importRecord || []) as unknown as CsvImport[]
+      const importId = importRows[0]?.id
       setProgress(50)
 
       let successCount = 0
       for (let i = 0; i < products.length; i++) {
         const p = products[i]
 
-        const { error: insertErr } = await (getSupabase() as any).from('products').insert(
+        const { error: insertErr } = await getSupabase().from('products').insert(
           {
             asin: p.asin,
             product_details: p.product_details,
@@ -105,17 +105,18 @@ export function UploadCsv({ onImport }: UploadCsvProps) {
       const scores = computeScores(products)
       let analysisCount = 0
 
-      const { data: importedProducts } = await (getSupabase() as any)
+      const { data: importedProducts } = await getSupabase()
         .from('products')
-        .select('id, asin')
+        .select('*')
         .eq('import_id', importId)
 
-      if (importedProducts) {
-        for (const prod of importedProducts) {
+      const importedProductRows = (importedProducts || []) as unknown as Product[]
+      if (importedProductRows.length > 0) {
+        for (const prod of importedProductRows) {
           const s = scores.get(prod.asin)
           if (!s) continue
 
-          const { error: insErr } = await (getSupabase() as any).from('analyses').insert({
+          const { error: insErr } = await getSupabase().from('analyses').insert({
             product_id: prod.id,
             opportunity_score: s.opportunity_score,
             product_tier: s.product_tier,
@@ -131,7 +132,7 @@ export function UploadCsv({ onImport }: UploadCsvProps) {
       }
 
       if (importId) {
-        await (getSupabase() as any)
+        await getSupabase()
           .from('csv_imports')
           .update({ status: 'completed' })
           .eq('id', importId)
@@ -145,8 +146,6 @@ export function UploadCsv({ onImport }: UploadCsvProps) {
       setStatus('error')
       setMessage(e instanceof Error ? e.message : 'Import fehlgeschlagen')
     }
-
-    setImporting(false)
   }, [onImport])
 
   const handleDrop = useCallback((e: React.DragEvent) => {
@@ -166,50 +165,63 @@ export function UploadCsv({ onImport }: UploadCsvProps) {
   }, [])
 
   return (
-    <Card>
+    <Card className="metric-card">
       <CardHeader className="pb-3">
-        <CardTitle className="text-sm font-medium">CSV Import</CardTitle>
-        <CardDescription className="text-xs">
-          Helium-10 Xray Export hochladen
-        </CardDescription>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <CardTitle className="text-sm font-semibold">CSV Import</CardTitle>
+            <CardDescription className="text-xs">
+              Helium-10 Xray Export hochladen
+            </CardDescription>
+          </div>
+          <div className="flex size-8 items-center justify-center rounded-lg bg-primary/15 text-primary">
+            <FileSpreadsheet className="size-4" />
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
         {status === 'idle' ? (
-          <div
-            onDrop={handleDrop}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            className={`
-              border-2 border-dashed rounded-lg p-6 text-center cursor-pointer
-              transition-colors duration-200
-              ${dragOver
-                ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/20'
-                : 'border-zinc-300 dark:border-zinc-600 hover:border-zinc-400 dark:hover:border-zinc-500'
-              }
-            `}
-            onClick={() => {
-              const input = document.createElement('input')
-              input.type = 'file'
-              input.accept = '.csv'
-              input.onchange = (e) => {
-                const file = (e.target as HTMLInputElement).files?.[0]
+          <>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv"
+              className="sr-only"
+              onChange={(e) => {
+                const file = e.target.files?.[0]
                 if (file) handleFile(file)
-              }
-              input.click()
-            }}
-          >
-            <Upload className="h-6 w-6 mx-auto mb-2 text-zinc-400" />
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">
-              CSV hier ablegen oder klicken zum Auswählen
-            </p>
-            <p className="text-xs text-zinc-400 mt-1">Helium-10 Xray Format</p>
-          </div>
+                e.currentTarget.value = ''
+              }}
+            />
+            <div
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              className={`
+                cursor-pointer rounded-lg border border-dashed p-6 text-center
+                transition-colors duration-200
+                ${dragOver
+                  ? 'border-primary bg-primary/10'
+                  : 'border-border bg-muted/25 hover:border-primary/60 hover:bg-muted/50'
+                }
+              `}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-lg bg-background text-primary shadow-sm">
+                <Upload className="size-5" />
+              </div>
+              <p className="text-sm font-medium">
+                CSV ablegen oder auswählen
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">Helium-10 Xray Format</p>
+            </div>
+          </>
         ) : (
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-sm">
-              {(status === 'parsing' || status === 'importing') && <FileText className="h-4 w-4 text-blue-500" />}
-              {status === 'done' && <CheckCircle className="h-4 w-4 text-green-500" />}
-              {status === 'error' && <AlertCircle className="h-4 w-4 text-red-500" />}
+              {(status === 'parsing' || status === 'importing') && <FileText className="h-4 w-4 text-primary" />}
+              {status === 'done' && <CheckCircle className="h-4 w-4 text-emerald-500" />}
+              {status === 'error' && <AlertCircle className="h-4 w-4 text-destructive" />}
               <span className="text-xs">
                 {status === 'parsing' && 'Analysiere CSV...'}
                 {status === 'importing' && 'Importiere Produkte...'}
@@ -221,7 +233,7 @@ export function UploadCsv({ onImport }: UploadCsvProps) {
               <Button
                 variant="outline"
                 size="sm"
-                className="w-full text-xs"
+                className="h-8 w-full text-xs"
                 onClick={() => {
                   setStatus('idle')
                   setProgress(0)
