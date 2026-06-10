@@ -121,4 +121,13 @@ export interface CsvParsedProduct {
   sponsored: boolean
   bestseller: boolean
   seller_age_months: number | null
+  // zusätzliche Helium-Felder (für Varianten-Gruppierung & bessere Signale)
+  parent_sales: number | null
+  parent_revenue: number | null
+  recent_purchases: number | null
+  created_date: string | null
+  size_category: string | null
+  buybox: string | null
+  review_velocity: number | null
+  dimensions: string | null
 }

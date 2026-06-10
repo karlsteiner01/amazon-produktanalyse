@@ -70,6 +70,14 @@ export function parseCsvRows(rows: ProductRow[]): CsvParsedProduct[] {
       sponsored: parseBool(row.Gesponsert),
       bestseller: parseBool(row.Bestseller),
       seller_age_months: parseGermanInt(row['Verkäuferalter (Mo.)']),
+      parent_sales: parseGermanInt(row['Verkäufe der übergeordneten Ebene']),
+      parent_revenue: parseGermanFloat(row['Umsatz der übergeordneten Ebene']),
+      recent_purchases: parseGermanInt(row['Kürzliche Einkäufe']),
+      created_date: row.Erstellungsdatum || null,
+      size_category: row['Größen-Kategorie'] || null,
+      buybox: row.BuyBox || null,
+      review_velocity: parseGermanInt(row['Neubewertungs-Geschwindigkeit']),
+      dimensions: row.Abmessungen || null,
     }
 
     if (!product.asin) continue

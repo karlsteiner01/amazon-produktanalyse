@@ -1,6 +1,6 @@
 'use client'
 
-import type { CsvImport } from '@/types'
+import { useData } from '@/lib/store'
 import {
   Select,
   SelectContent,
@@ -8,22 +8,21 @@ import {
   SelectTrigger,
 } from '@/components/ui/select'
 
-interface ImportSelectorProps {
-  imports: CsvImport[]
-  selectedImportId: string | null
-  onSelect: (id: string | null) => void
-}
-
-export function ImportSelector({ imports, selectedImportId, onSelect }: ImportSelectorProps) {
+/** Globale Import-Auswahl (Scope), verbunden mit dem Daten-Store. */
+export function ImportSelector() {
+  const { imports, selectedImportId, selectImport } = useData()
   if (imports.length <= 1) return null
 
-  const selectedImport = imports.find((item) => item.id === selectedImportId)
-  const selectedLabel = selectedImport?.filename.replace(/\.csv$/i, '') || 'Alle Imports'
+  const selected = imports.find((item) => item.id === selectedImportId)
+  const label = selected?.filename.replace(/\.csv$/i, '') || 'Alle Imports'
 
   return (
-    <Select value={selectedImportId || 'all'} onValueChange={(val) => onSelect(val === 'all' ? null : val)}>
-      <SelectTrigger className="h-9 w-full min-w-0 sm:w-56 text-xs">
-        <span className="truncate text-left">{selectedLabel}</span>
+    <Select
+      value={selectedImportId || 'all'}
+      onValueChange={(val) => selectImport(val === 'all' ? null : (val as string))}
+    >
+      <SelectTrigger className="h-9 w-40 min-w-0 text-xs sm:w-52">
+        <span className="truncate text-left">{label}</span>
       </SelectTrigger>
       <SelectContent>
         <SelectItem value="all" className="text-xs">

@@ -53,9 +53,9 @@ export function Sidebar() {
 
       <div className="hidden border-t border-sidebar-border p-4 lg:block">
         <div className="rounded-lg border border-sidebar-border bg-muted/45 p-3 dark:bg-white/5">
-          <p className="text-xs font-medium">v1.0</p>
+          <p className="text-xs font-medium">v2.0</p>
           <p className="mt-1 text-xs text-muted-foreground dark:text-sidebar-foreground/55">
-            Lokale CSV-Analyse mit Supabase-Speicher.
+            Lokale CSV-Analyse — alles bleibt in deinem Browser.
           </p>
         </div>
       </div>
